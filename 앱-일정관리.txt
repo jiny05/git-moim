@@ -292,9 +292,8 @@ SELECT MOIMS.*, USERS.NAME AS MANAGER_NAME, AVATARS.URL AS MANAGER_URL
     
 ==> reply 등록 구현
       사용자 입력화면 구현(/views/moim/detail.jsp 에 추가 구현)
-     ▷ action: /moim/add-reply-task 
-
-
+	▷ action: /moim/add-reply-task , method : post,  작성내용을 전달받을 param 은 ment 로 설정
+    ▷ 위 액션 경로를 처리할 컨트롤러 구현 ▷ 
 
  ─────────────────────────────────────────────────────────』 
 
