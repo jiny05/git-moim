@@ -290,7 +290,9 @@ SELECT MOIMS.*, USERS.NAME AS MANAGER_NAME, AVATARS.URL AS MANAGER_URL
         이 결과를 request.setAttribute ▷ view 에서 list 상태에 따라 분기를 침 ▷
          비어있지 않다면 forEach ▷ css 를 손봄.
     
-
+==> reply 등록 구현
+      사용자 입력화면 구현(/views/moim/detail.jsp 에 추가 구현)
+     ▷ action: /moim/add-reply-task 
 
 
 

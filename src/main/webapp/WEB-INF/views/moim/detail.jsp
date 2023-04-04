@@ -88,6 +88,26 @@
 					</div>
 				</div>
 			</div>
+			<%-- 모임에 댓글을 달기 위한 입력 영역 --%>
+			<div class="moim-add-reply">
+				<form action="/moim/add-reply-task" method="post"
+					style="display: flex; align-items: stretch; gap: 4px; justify-content: center;">
+					<input type="hidden" name="moimId" value="${moim.id }"/>
+					<c:choose>
+						<c:when test="${empty sessionScope.logonUser }">
+							<textarea style="width: 80%; resize: none" disabled
+								placeholder="내용을 입력해주세요."></textarea>
+							<button type="submit" disabled>등록</button>
+						</c:when>
+						<c:otherwise>
+							<textarea style="width: 80%; resize: none"
+								placeholder="내용을 입력해주세요." name="ment"></textarea>
+							<button type="submit">등록</button>
+						</c:otherwise>
+					</c:choose>
+				</form>
+			</div>
+			<%-- 모임에 등록된 댓글을 렌더링하는 영역 --%>
 			<div class="moim-replys">
 				<c:choose>
 					<c:when test="${empty replys }">
@@ -103,8 +123,9 @@
 							<c:forEach var="r" items="${replys }">
 								<tr>
 									<td>${r.writer }</td>
-									<td >${r.ment }</td>
-									<td><fmt:formatDate value="${r.writed }" pattern="yyyy.MM.dd"/></td>
+									<td>${r.ment }</td>
+									<td><fmt:formatDate value="${r.writed }"
+											pattern="yyyy.MM.dd" /></td>
 								</tr>
 							</c:forEach>
 						</table>

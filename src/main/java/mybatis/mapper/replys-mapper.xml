@@ -5,12 +5,18 @@
 <mapper namespace="replys">
 	<select id="findByMoimId" resultType="data.Reply"
 		parameterType="string">
-		SELECT * FROM REPLYS WHERE MOIM_ID=#{moimId} ORDER BY
+		SELECT * FROM REPLYS WHERE MOIM_ID=#{fdsmakfdmsaklfdsmaklfdsmalkfdsamklfdsamklfdsanklfdsanklfdsa } ORDER BY
 		WRITED ASC
 	</select>
 	<insert id="create" parameterType="hashmap">
 		INSERT INTO REPLYS(ID,
-		MOIM_ID, WRITER,COMMENT)
+		MOIM_ID, WRITER,MENT)
+		VALUES(REPLYS_SEQ.NEXTVAL, #{moimId},
+		#{writer}, #{ment})
+	</insert>
+	<insert id="createByVo" parameterType="data.Reply">
+		INSERT INTO REPLYS(ID,
+		MOIM_ID, WRITER,MENT)
 		VALUES(REPLYS_SEQ.NEXTVAL, #{moimId},
 		#{writer}, #{ment})
 	</insert>
