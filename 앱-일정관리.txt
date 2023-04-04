@@ -1,0 +1,301 @@
+# 모임 일정관리 서비스 #
+ → 개발기간 (2023-03-24)
+ → MVC 패턴
+
+# Controller
+ ① IndexController : 사용자 웰컴 처리하는 컨트롤러
+  - "/index" 경로에 바인딩 (server/web.xml 설정 건드려서 index 를 Welcome 파일로 등록)
+    
+ ② UserController : 사용자 가입이나 로그인 탈퇴 등을 처리하는 컨트롤러
+  - "/user/*" 경로에 바인딩
+    ▷ /user/join : 조인폼 제공이 목적  (/WEB-INF/views/user/join.jsp 에서 View 처리 )
+    ▷ /user/join-task : 
+    ▷ /user/login : 로그인폼 제공이 목적 (/WEB-INF/views/user/login.jsp 에서 View 처리 )
+    ▷ /user/login-task  :
+              
+  『저장할 회원 정보 (아이디, 비밀번호, 이름, 아바타)
+
+    ※ DB ACCESS ID : C##MOIM  (1q2w3e4r)  / 192.168.422
+    CREATE TABLE AVATARS (
+       ID VARCHAR2(30),
+       URL VARCHAR2(900),
+         
+       CONSTRAINT AVATARS_01 PRIMARY KEY (ID)
+    );
+    CREATE TABLE USERS (
+       ID VARCHAR2(30),
+       PASS VARCHAR2(900),
+       NAME VARCHAR2(30) NOT NULL,
+       AVATAR_ID VARCHAR2(30),
+
+       CONSTRAINT USERS_01 PRIMARY KEY(ID),
+       CONSTRAINT USERS_02 FOREIGN KEY(AVATAR_ID) REFERENCES AVATARS(ID),
+       CONSTRAINT USERS_03 CHECK (PASS IS NOT NULL)
+    );                                                                 』       
+  『회원가입 흐름 ───────────────────────────────────────
+     1. /user/join :  
+           Avatars 의 모든 정보를 불러온 후 데이터 세팅 시켜서 뷰로 넘김 
+           → 뷰에서 입력해야되는 정보들은 text,parssword 로, 아바타는 선택할 수 있게 radio 로 구현
+           → 제출하는 데이터는 /user/join-task 에서 처리를 할 꺼임.
+
+     2. /user/join-task :  
+           전송받은 내용의 유효성을 체크할꺼임 (
+            id는 영문자로 시작하여 영어+숫자만 가능, pass는 4글자 이상, 이름은 2글자 이상) 
+           → DB에 저장을 할때 비밀번호를 암호화해서 저장할꺼임.
+           → 처리결과에 따라 적절한 응답을 만들꺼임.
+    
+    (해시처리해서 암호저장했다면 로그인 화면 만들어서 
+     사용자가 보내준 비밀번호 평문으로 check 되는지 확인해 볼것
+      / session 처리 아직 안해도 됨)
+  『로그인 흐름 ────────────────────────────────────────』
+     1. /user/login :  
+           → 로그인 아이디 작성 input 에는 파라미터로 넘어온 userId를 세팅시켜둠.
+	(회원가입 성공시 /user/login 을 가입했던 id를 userId로 세팅해서 리다이렉트)
+           → 제출하는 데이터는 /user/login-task 에서 처리를 할 꺼임.
+
+     2. /user/login-task :  
+          → DB에서 해당하는 사용자 id의 데이터를 찾아와서 사용자가 같이 보낸 pass 값이
+            DB에서 불러온 pass값과 동일한지 체크 (암호화해서 저장하기 때문에 Bcript 활용)
+	QUERY : SELECT USERS.*, AVATARS.URL AS AVATAR_URL 
+		FROM USERS JOIN AVATARS ON USERS.AVATAR_ID = AVATARS.ID 
+		WHERE USERS.ID=?";
+
+          → 처리결과에 따라 적절한 응답을 만들꺼임.
+   ───────────────────────────────────────────────』 
+  『마지막 로그인 했던 아이디 기억하기 / 혹은 자동 로그인 ─────────────────────
+    → 로그인 했을때 사용자에게 로그인 ID를 VALUE 로 하는 ID_SAVE 쿠키를 1주일 정도 유지 되게 해서 전송
+    
+    → 사용자가 로그인을 하겠다고 요청을 보낼 때 (/user/login)
+       보낸 쿠키중에 ID_SVAE 쿠키가 있다면 그 값을 뽑아서 req.setAttribute 하고 로그인 폼을 띄우는 뷰 JSP 에서
+       value 를 셋팅해서 응답 전송
+
+   ※ 자동로그인 ? 구현을 하고 싶다면,,
+   → 자동로그인 희망자는 UUID 같은 걸 이용해서 문자열 만든 후 DB에 유저 아이디와 랜덤문자를 insert 
+       쿠키로 이 문자열을 전송시켜둠
+
+   → 사용자가 요청을 보낼때 그 쿠키값을 확인 한 후 DB 에 그 문자열과 매치되는 유저가 있다면
+      session.setAttribute("logon",true) 로 처리해서 바로 인증 통과한 상태로 업데이트
+
+    ───────────────────────────────────────────────』
+   『로그인을 한 유저와 아직 하지 않은 유저 뷰 처리 ─────────────────────
+   → /index 로 접근 했을 때 띄울 뷰 페이지에서
+      Session의 상태에 따라 화면 구성이 달라지게 if~else 처리(로그인시 logon true로 변경됨)
+   → 기본적으로 logon이 not true 라면 로그인으로 갈 수 있게 link를 제공
+   → logon이 true 라면 사용자의 이름과 아바타가 보이게 뷰 렌더링 해서 제공
+    ───────────────────────────────────────────────』
+   『모임 정보를 저장할 DATABASE 설계 ─────────────────────
+CREATE TABLE MOIMS (
+    ID VARCHAR2(90) NOT NULL, -- primiray key,
+    MANAGER_ID VARCHAR2(90) NOT NULL,
+    EVENT VARCHAR2(300) NOT NULL, --모임이름
+    TYPE VARCHAR2(15) NOT NULL, -- "public" / "private" 
+    CATE VARCHAR2(30) NOT NULL, -- 목적용으로 스포츠, 문화, 학습, 봉사 등 이런값들을 저장할꺼임.
+    DESCRIPTION VARCHAR2(4000) NOT NULL, -- 모임소개글 
+    MAX_PERSON NUMBER(2,0) NOT NULL, -- 최대 참가자 수
+    BEGIN_DATE DATE NOT NULL, -- 투표 가능 시작날
+    END_DATE DATE, -- 투표 가능 끝날
+    FINAL_COST NUMBER(5,0), -- 결정된 회비
+    
+
+    CONSTRAINT MOIMS_01 PRIMARY KEY(ID),
+    CONSTRAINT MOIMS_02 FOREIGN KEY(MANAGER_ID) REFERENCES USERS(ID),
+    CONSTRAINT MOIMS_03 CHECK( TYPE IN ('public', 'private')),
+    CONSTRAINT MOIMS_04 CHECK( MAX_PERSON BETWEEN 3 AND 10 ),
+    CONSTRAINT MOIMS_05 CHECK( END_DATE >= BEGIN_DATE )
+     
+  );   
+
+    INSERT INTO MOIMS BALUES(?, ?, ?, ?, ?, ?, ?, TO_DATE(?, 'YYYY-MM-DD HH24:MI'), TO_DATE(?, 'YYYY-MM-DD HH24:MI'), null)
+                                    -- '2023-05-11 03:12'
+    ───────────────────────────────────────────────』
+#23.03.29
+
+ 『모임개설 흐름 ────────────────────────────────────────』
+     :: User 쪽 Controller 랑은 다르게 이번에는 경로별로 컨트롤러 따로 설정 ::
+     1. /moim/create :  (moim.MoimCreateController 에서 처리)
+           → 사용자에게 모임개설에 필요한 정보를 입력 할 수 있는 폼을 제공한다.
+           → /WEB-INF/view/moim/create.jsp 를 뷰파일로 사용함
+
+     2. /moim/create-task :  (moim.MoimCreateTaskController 에서 처리)
+          → 사용자가 전달한 내용과 전달하지 않았지만 create 에 필요한 값들(managerId, id)을 확보해서
+	  DAO 통해서 create 작업 수행
+          → 처리결과에 따라 적절한 응답을 만들꺼임.
+	(실패시에는 다시 /moim/create로 리다이렉트,
+	 성공시에는 개설 성공을 축하하는 View 파일 만들어서 거기서 HTML을 전송하거나
+	  모임 상세보기 페이지로 리다이렉트 시키거나)
+   ───────────────────────────────────────────────』 
+ 『랜딩페이지(/index) 업그레이드 ────────────────────────────────────────』
+     1. MOIM 데이터 중 type이 public 이고 모임 시간까지 남아있는 데이터들 중 모임 시간이 임박한 데이터 3건 노출을 하고자 함.
+          → 원하는 데이터를 추출할 SQL 을 짜서 그걸 처리해줄 function을 만들어야 됨.
+	SELECT * FROM
+	(select * from moims where type = 'public' and begin_date > sysdate order by begin_date - sysdate)
+	WHERE ROWNUM <=3
+
+          → IndexController가 작동할때 위에 만든 function 콜해서 데이터 확보한 다음에 req.setAttribte 후 뷰로 넘김
+          → View에서는 Controller에서 셋팅 됐을 데이터를 가지고 forEach 를 돌리면서 HTML로 변환
+            <c:forEach var="moim" items="${latest }">
+                   ${moim.id } .. ${moim.type} 
+            </c:forEach>
+
+   ───────────────────────────────────────────────』 
+ 『전체 모임 정보 제공 페이지 설정 ────────────────────────────────────────』
+    1. /moim/search 경로를 처리를 할 컨트롤러 만들어서
+        사용자가 이쪽을 올때 cate 라는 파람을 가지고 오면 해당 카테고리의 데이터만 추출해서 시각화 ( 안가지고 오면 전체)
+        cate라는 값을 안가지고 오면 전체 데이터를 추출해서 시각화
+       /moim/search?cate=스포츠 $ cate =사교 => cate가 '스포츠' 거나 '사교'인 데이터를 보여주게
+       /moim/search ==> 모든 데이터를 전부 보여주게 유도할거임.
+
+       조회대상은 begin 값이 sysdate 이후임.
+
+      → 특정 카테고리의 데이터를 가져오는 SQL을 짜고 function 화 (머리를 잘 쓰면 하나로 퉁쳐서 만들거임.)
+
+       요청 들어올때 cate 파람 뽑았을때 null이면 전체 가져오면 되고, 아니면 특정 카테 가지고 오게 분기 처리 / 배열 길이에 따라서 SQL도 바뀜
+
+     SELECT * FROM MOIMS WHERE BEGIN_DATE > SYSDATE ORDER BY BEGIN_DATE 
+     SELECT * FROM MOIMS WHERE BEGIN_DATE > SYSDATE AND CATE IN ( ? ) ORDER BY BEGIN_DATE 
+     SELECT * FROM MOIMS WHERE BEGIN_DATE > SYSDATE AND CATE IN ( ? , ?) ORDER BY BEGIN_DATE 
+     SELECT * FROM MOIMS WHERE BEGIN_DATE > SYSDATE AND CATE IN ( ? , ?, ? ) ORDER BY BEGIN_DATE 
+     SELECT * FROM MOIMS WHERE BEGIN_DATE > SYSDATE AND CATE IN ( ? , ?, ? , ?) ORDER BY BEGIN_DATE 
+     SELECT * FROM MOIMS WHERE BEGIN_DATE > SYSDATE AND CATE IN ( ? , ?, ? , ? , ?) ORDER BY BEGIN_DATE 
+     SELECT * FROM MOIMS WHERE BEGIN_DATE > SYSDATE AND CATE IN ( ? , ?, ? , ? , ?, ?) ORDER BY BEGIN_DATE 
+     SELECT * FROM MOIMS WHERE BEGIN_DATE > SYSDATE AND CATE IN ( ? , ?, ? , ? , ?, ?, ?) ORDER BY BEGIN_DATE 
+
+     runction 통해 데이터 확보했다면 setting 해서 뷰로 넘기면 됨.
+
+      → 뷰에서 세팅된 데이터를 토대로 HTML 화 / (현재 검색중인 카테값을 갖은 체크박스에 Checked 처리)
+   ───────────────────────────────────────────────────────』 
+
+ 『모임 상세 페이지 ────────────────────────────────────────
+ : 노출시킬 데이터 및 기능 요약
+    / 모임 기본 정보
+    / 참석자들의 이름.
+    / 참석 비용 투표
+
+    (주선자가 아니라면)
+    / 참석 신청 =======> 공개면 바로 참석 예약
+                   =======> 비공개면 참가대기
+    / 참석 취소
+    (주선자라면
+    / 주선자는 참가 대상 관리
+    / 참석에 대한 댓글
+
+     참석자를 관리할 정보 DB TABLE
+     CREATE TABLE ATTENDANCES (
+        ID NUMBER(6, 0),  -- 제어용 키로 사용할 컬럼
+        
+        USER_ID VARCHAR2(60) NOT NULL,
+        MOIM_ID VARCHAR2(60) NOT NULL,
+        STATUS NUMBER(1, 0),  --   1:대기    2:참석
+       
+        CONSTRAINT ATTENDANCES_01 PRIMARY KEY (ID),
+        CONSTRAINT ATTENDANCES_02 FOREIGN KEY (USER_ID) REFERENCES USERS(ID),
+        CONSTRAINT ATTENDANCES_03 FOREIGN KEY (MOIM_ID) REFERENCES MOIMS(ID)
+     );
+     
+     CREATE SEQUENCE  ATTENDANCES_SEQ START WITH 1 INCREMENT BY 1 MAXVALUE 999999;
+
+     CREATE SEQUENCE -- 숫자를 자동으로 생성
+
+     SELECT ATTENDANCES_SEQ.NEXTVAL FROM DUAL;
+     
+     INSERT INTO ATTENDANCES VALUES (ATTENDANCES_SEQ.NEXTVAL, 'master', 'e49029ae', 1);
+     
+     SELECT * FROM ATTENDANCES;
+
+  1. 모임 상세보기 처리
+      → MOIMS TABLE 에서 특정 모임 ID에 해당하는 정보를 추출하는 function을 구현 
+                    Moims / Moim findById(String id)
+	        SELECT * FROM MOIMS WHERE ID = ? (X)
+
+SELECT MOIMS.*, USERS.NAME AS MANAGER_NAME, AVATARS.URL AS MANAGER_URL
+    FROM MOIMS
+    JOIN USERS ON MOIMS.MANAGER_ID = USERS.ID
+    JOIN AVATARS ON AVATARS.ID = USERS.AVATAR_ID
+    WHERE MOIMS.ID = '5dffd0a8';
+
+      → ATTENDANCES TABLE 에서 특정 MOIM 에 해당하는 정보를 추출하는 function을 구현
+
+                    Attendacens / List<Attendance> findByMoimId(String moimId)
+
+      /moim/detail 경로를 처리할 Controller를 만들어서
+           해당 컨트롤러가 작동할때 모임 아이디를 파라미터로 물고오게 유도를 할거임.
+           location.href='/moim/detail?id=${moim.id}' -- a href 효과를 주는 스크립트
+
+       id 라는 이름으로 넘어올테니, 그 파람 뽑아서
+       모임정보 불러와서 세팅하고, 참석자 정보 불러와서 셋팅하고,
+       현재 로그인 하고 있는 사용자의 모임에 참가여부를 계산해서 셋팅
+       (로그인 자체를 안했다면 -1 / 아직 정보가 없다면 0, 있다면 status 값 세팅)
+       SELECT * FROM ATTENDANCES WHERE MOIM_ID=? AND USER_ID=?
+
+       /WEB-INF/views/moim/datail.jsp 에서 뷰를 처리할테니 그쪽으로 밀어!
+
+       (정상적으로 작동하려면,
+    + /WEB-INF/views/moim/detail.jsp 
+    + /WEB-INF/views/common/top.jsp 
+    + /resource/css/style.css 
+
+   ───────────────────────────────────────────────────────』 
+ 『사용자의 참가 신청 처리 ────────────────────────────────────────
+   1. /moim/
+    : 사용자가 상세보기에서 참가하기를 눌렀을때 발생하는 요청을 처리하려고 함.
+     (=ATTENANCES 테이블에 데이터 집어넣기 : INSERT INTO ATTENDANCES VALUES(ATTENDANCES_SEQ.NEXTVAL, ?, ?, ?)
+     moim_id(받아야 됨) / USER_ID(세션에서) / STATUS(모임아이디로 데이터 찾아서 결정)
+
+     만약 public 모임에 참가는 상황이면 
+     UPDATE MOIMS SET CURRENT_PERSON = CURRENT_PERSON + 1 WHERE ID = ? 
+
+     ?? 추가 참가가 되는 상황은 발생하지 않는지? / (Public 인 경우에 한해서만)
+
+      처리가 끝나면 그냥 /moim/detail?id= 에다가 보내줬던 ID 붙여서 리다이렉트
+
+   ───────────────────────────────────────────────────────』 
+#230404
+『모임상세보기에 댓글 구현 ─────────────────────────────────────────────────────────────────────
+   - 구현시 포함해야할 사항 
+     : DB 작업은 Mybatis 로
+     : master에서 feature 따서 작업 후 merge 할것
+         (feature 에서 3번이상의 커밋을 진행할 것 - squash 라는 기능을 써보기 위해서)
+       → git bash  →  git branch feature/add-moim-branch  →  git checkout feature/add-moim-branch
+                   →  git checkout -b feature/add-moim-branch 
+
+        (git branch -d <branch-name>  : branch 삭제)
+
+   - DB TABLE
+   CREATE TABLE REPLYS (
+      ID NUMBER(6, 0), -- 고유키가 될텐데 SEQUENCE 로 연동
+      MOIM_ID VARCHAR2(60) NOT NULL, -- 
+      WRITER VARCHAR2(60) NOT NULL, -- 작성자
+      COMMENT VARCHAR2(2000) NOT NULL, -- 댓글내용
+      WRITED DATE DEFAULT SYSDATE,
+
+      CONSTRAINT REPLYS_01 PRIMARY KEY(ID)
+   )
+
+   CREATE SEQUENCE REPLYS_SEQ START WITH 1 INCREMENT BY 1;
+
+   <replys-mapper.xml>
+   
+   INSERT INTO REPLYS(ID, MOIM_ID, WRITER,COMMENT) VALUES(REPLYS_SEQ.NEXTVAL, #{moimId}, #{writer}, #{comment})
+
+   SELECT * FROM REPLYS WHERE MOIM_ID=#{moimId} ORDER BY WRITED ASC
+
+    
+==> DB 처리부분
+     ▷ data.Reply 설계     ▷replays-mapper.xml 작성      ▷config.xml수정
+               (▷ git commit)
+
+==> 모임상세보기를 할때 replay를 같이 randering
+     ▷ MoimDetailController /
+        myBatis 를 이용해서 특정 모임ID의 reply 를 다 가지고 옴 ▷ sqlSession.selectList("replys.findByMoimId", id)
+        이 결과를 request.setAttribute ▷ view 에서 list 상태에 따라 분기를 침 ▷
+         비어있지 않다면 forEach ▷ css 를 손봄.
+    
+
+
+
+
+ ─────────────────────────────────────────────────────────』 
+
+
+
+
