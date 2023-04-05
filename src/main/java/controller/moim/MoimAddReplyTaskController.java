@@ -36,7 +36,7 @@ public class MoimAddReplyTaskController extends HttpServlet {
 		parameter.put("writer", user.getId());
 		parameter.put("ment", ment);
 		parameter.put("moimId", moimId);
-		System.out.println("myBatis.." + parameter);
+		System.out.println("myBatis .." + parameter );
 		int r = sqlSession.insert("replys.create", parameter);
 
 		sqlSession.commit();
